@@ -6,7 +6,7 @@ from scipy.stats import multivariate_normal
 import seaborn as sns
 import time
 from typing import Dict, Tuple, List, Optional
- 
+import pickle
  
 class MixCombiTestFramework:
     """
@@ -122,8 +122,26 @@ class MixCombiTestFramework:
             print(f"The most negative point indicates where the largest decrease in entropy occurred.")
 
         return fig 
+    
+    def save_results(self, results: Dict, filename: str):
+        """
+        Saves the results dictionary to a file using pickle.
+        """
+        with open(filename, 'wb') as f:
+            pickle.dump(results, f)
+        print(f"Results successfully saved to {filename}")
 
-    def fit_gmm_with_ics(self, data: np.ndarray, k_min: int = 1, k_max: int = 12) -> Dict:
+    def load_results(self, filename: str) -> Dict:
+        """
+        Loads a results dictionary from a file using pickle.
+        """
+        with open(filename, 'rb') as f:
+            results = pickle.load(f)
+        print(f"Results successfully loaded from {filename}")
+        return results
+    
+    
+    def fit_gmm_with_ics(self, data: np.ndarray, k_min: int = 1, k_max: int = 12, save_file: Optional[str] = None) -> Dict:
         """
         Fits GMM models and calculates BIC, AIC, and ICL for each.
         Returns the parameters for the best BIC and ICL solutions.
@@ -178,27 +196,32 @@ class MixCombiTestFramework:
         best_gmm_bic = models[np.argmin(bic_scores)]
         best_gmm_icl = models[np.argmin(icl_scores)]
         
-        bic_params = {
-            'K': best_k_bic,
-            'mu': best_gmm_bic.means_,
-            'S': best_gmm_bic.covariances_,
-            'p': best_gmm_bic.weights_
-        }
-        
-        icl_params = {
-            'K': best_k_icl,
-            'mu': best_gmm_icl.means_,
-            'S': best_gmm_icl.covariances_,
-            'p': best_gmm_icl.weights_
+        results = {
+            'bic_params': {
+                'K': best_k_bic,
+                'mu': best_gmm_bic.means_,
+                'S': best_gmm_bic.covariances_,
+                'p': best_gmm_bic.weights_
+            },
+            'icl_params': {
+                'K': best_k_icl,
+                'mu': best_gmm_icl.means_,
+                'S': best_gmm_icl.covariances_,
+                'p': best_gmm_icl.weights_
+            },
+            'best_bic_model': best_gmm_bic,
+            'best_icl_model': best_gmm_icl,
+            'bic_scores': bic_scores,
+            'icl_scores': icl_scores,
+            'k_values': k_values
         }
 
-        return {
-            'bic_params': bic_params,
-            'icl_params': icl_params,
-            'best_bic_model': best_gmm_bic,
-            'best_icl_model': best_gmm_icl
-        }
-    
+        # New: Save the results if a filename is provided
+        if save_file:
+            self.save_results(results, f'{save_file}_gmm_results.pkl')
+            
+        return results
+        
     def evaluate_clustering(self, data: np.ndarray, true_labels: Optional[np.ndarray], pred_labels: np.ndarray, 
                           method_name: str = "") -> Dict:
         """

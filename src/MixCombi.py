@@ -19,7 +19,7 @@ class MixCombi:
         """
         self.data = data
         self.n, self.d = data.shape
-        
+        print(bic_params)
         self.bic_K = bic_params['K']
         self.bic_mu = np.array(bic_params['mu'])
         self.bic_S = np.array(bic_params['S'])

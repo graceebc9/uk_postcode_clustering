@@ -68,7 +68,7 @@ def load_results(filepath):
     return {}
 
 def gmm_parameter_search(dfz, coldict, samples=None, stratify_by=None, 
-                     op_path='', n=50,
+                     op_path='', min_n=1, max_n=50,
                      resume=True, model_to_test=None):
     """
     Perform Gaussian Mixture Model parameter search with logging and resume capability
@@ -176,7 +176,7 @@ def gmm_parameter_search(dfz, coldict, samples=None, stratify_by=None,
     
     # Parameter grid
     param_grid = {
-        "n_components": np.arange(1, n),
+        "n_components": np.arange(min_n, max_n),
         "covariance_type": ["full"],
     }
     total_combinations = len(list(ParameterGrid(param_grid)))

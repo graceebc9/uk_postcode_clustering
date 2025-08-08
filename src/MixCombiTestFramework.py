@@ -7,7 +7,8 @@ import seaborn as sns
 import time
 from typing import Dict, Tuple, List, Optional
 import pickle
- 
+import os 
+
 class MixCombiTestFramework:
     """
     A framework for testing MixCombi with real or synthetic data.
@@ -141,13 +142,20 @@ class MixCombiTestFramework:
         return results
     
     
-    def fit_gmm_with_ics(self, data: np.ndarray, k_min: int = 1, k_max: int = 12, save_file: Optional[str] = None) -> Dict:
+    def fit_gmm_with_ics(self, data: np.ndarray, k_min: int = 1, k_max: int = 12, save_file: str = None, overwrite: Optional[bool] = False) -> Dict:
         """
         Fits GMM models and calculates BIC, AIC, and ICL for each.
         Returns the parameters for the best BIC and ICL solutions.
         """
         print(f"\nFitting GMM with BIC/ICL selection (K={k_min} to {k_max})...")
+        results_file = f'{save_file}_gmm_results.pkl'
         
+        if os.path.exists(results_file):
+            print('File already exists')
+            if not overwrite:
+                return self.load_results(results_file)
+            else:
+                print('Overwite is enabled, re runing GMM') 
         models = []
         bic_scores = []
         icl_scores = []
@@ -181,16 +189,28 @@ class MixCombiTestFramework:
         print(f"\nBIC selected K = {best_k_bic}")
         print(f"ICL selected K = {best_k_icl}")
         
-        plt.figure(figsize=(10, 6))
-        plt.plot(k_values, bic_scores, 'bo-', label='BIC Score', linewidth=2)
-        plt.plot(k_values, icl_scores, 'go-', label='ICL Score', linewidth=2)
-        plt.axvline(x=best_k_bic, color='blue', linestyle=':', label=f'BIC choice K={best_k_bic}', alpha=0.7)
-        plt.axvline(x=best_k_icl, color='green', linestyle=':', label=f'ICL choice K={best_k_icl}', alpha=0.7)
-        plt.xlabel('Number of Components (K)')
-        plt.ylabel('Information Criterion')
-        plt.title('Model Selection: BIC vs ICL')
-        plt.legend()
-        plt.grid(True, alpha=0.3)
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10))
+        
+        # BIC plot
+        ax1.plot(k_values, bic_scores, 'bo-', label='BIC Score', linewidth=2)
+        ax1.axvline(x=best_k_bic, color='blue', linestyle=':', label=f'BIC choice K={best_k_bic}', alpha=0.7)
+        ax1.set_xlabel('Number of Components (K)')
+        ax1.set_ylabel('BIC Score')
+        ax1.set_title('Model Selection: BIC')
+        ax1.legend()
+        ax1.grid(True, alpha=0.3)
+        
+        # ICL plot
+        ax2.plot(k_values, icl_scores, 'go-', label='ICL Score', linewidth=2)
+        ax2.axvline(x=best_k_icl, color='green', linestyle=':', label=f'ICL choice K={best_k_icl}', alpha=0.7)
+        ax2.set_xlabel('Number of Components (K)')
+        ax2.set_ylabel('ICL Score')
+        ax2.set_title('Model Selection: ICL')
+        ax2.legend()
+        ax2.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        plt.savefig(f'{save_file}_BIC_ICL.png')
         plt.show()
         
         best_gmm_bic = models[np.argmin(bic_scores)]
@@ -216,9 +236,8 @@ class MixCombiTestFramework:
             'k_values': k_values
         }
 
-        # New: Save the results if a filename is provided
-        if save_file:
-            self.save_results(results, f'{save_file}_gmm_results.pkl')
+ 
+        self.save_results(results, results_file)
             
         return results
         

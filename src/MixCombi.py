@@ -6,7 +6,8 @@ from scipy.stats import multivariate_normal
 import seaborn as sns
 import time
 from typing import Dict, Tuple, List, Optional
- 
+import pickle 
+
 class MixCombi:
     """
     Python implementation of the Mixture Component Combining algorithm
@@ -33,6 +34,26 @@ class MixCombi:
         """Safe logarithm to avoid log(0)"""
         return np.log(np.maximum(x, epsilon))
     
+    def save_solutions(self, filename: str):
+        """Saves the combined_solutions dictionary to a file."""
+        if not self.combined_solutions:
+            print("No solutions to save. Please run combine_components() first.")
+            return
+
+        with open(filename, 'wb') as f:
+            pickle.dump(self.combined_solutions, f)
+        print(f"Solutions saved to '{filename}'")
+
+    def load_solutions(self, filename: str):
+        """Loads the combined_solutions dictionary from a file."""
+        try:
+            with open(filename, 'rb') as f:
+                self.combined_solutions = pickle.load(f)
+            print(f"Solutions loaded from '{filename}'")
+        except FileNotFoundError:
+            print(f"Error: File '{filename}' not found.")
+            self.combined_solutions = {}
+
     def posterior_probabilities(self, mu: np.ndarray, S: np.ndarray, p: np.ndarray, K: int) -> np.ndarray:
         """
         Compute posterior probabilities tau_ik = P(component k | observation i)
@@ -164,3 +185,39 @@ class MixCombi:
         
         print("-" * 60)
  
+    def get_final_labels(self, selected_K: Optional[int] = None) -> np.ndarray:
+        """
+        Prompts the user to manually select the number of clusters and returns the labels.
+        If selected_K is provided, it returns the labels for that K without prompting.
+        
+        Returns:
+            np.ndarray: An array of cluster labels for the selected number of clusters.
+        """
+        if not self.combined_solutions:
+            print("Error: No combined solutions found. Please run `combine_components()` first.")
+            return None
+    
+        if selected_K is None:
+            # Prompt the user for input
+            while True:
+                try:
+                    # Find the valid range of K values from the combined solutions
+                    valid_K = sorted(self.combined_solutions.keys())
+                    min_K, max_K = valid_K[0], valid_K[-1]
+                    
+                    user_input = input(f"Enter the desired number of clusters (K) from {min_K} to {max_K}: ")
+                    selected_K = int(user_input)
+    
+                    if selected_K in self.combined_solutions:
+                        print(f"✅ Selected K = {selected_K}")
+                        break
+                    else:
+                        print(f"❌ Invalid number of clusters. Please choose a value from {valid_K}.")
+                except ValueError:
+                    print("❌ Invalid input. Please enter an integer.")
+    
+        if selected_K in self.combined_solutions:
+            return self.combined_solutions[selected_K]['labels']
+        else:
+            print(f"Error: Solution for K={selected_K} does not exist.")
+            return None 
